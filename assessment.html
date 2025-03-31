@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+        .dark-mode {
+            background-color: #222;
+            color: #fff;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s, color 0.3s;
+        }
+        .dark-mode .container {
+            background: #333;
+            color: #fff;
+        }
+        .task {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            cursor: grab;
+        }
+        .task.completed span {
+            text-decoration: line-through;
+        }
+        .buttons {
+            display: flex;
+            gap: 5px;
+        }
+        button {
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Task Manager</h2>
+        <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+        <input type="text" id="taskInput" placeholder="Add a new task" />
+        <button onclick="addTask()">Add Task</button>
+        <select id="filter" onchange="filterTasks()">
+            <option value="all">All</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+        </select>
+        <ul id="taskList" ondragover="allowDrop(event)" ondrop="dropTask(event)"></ul>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", loadTasks);
+        function addTask() {
+            let taskInput = document.getElementById("taskInput");
+            let taskText = taskInput.value.trim();
+            if (taskText === "") return;
+            let taskList = document.getElementById("taskList");
+            let li = document.createElement("li");
+            li.className = "task";
+            li.draggable = true;
+            li.ondragstart = dragTask;
+            li.innerHTML = `
+                <span>${taskText}</span>
+                <div class="buttons">
+                    <button onclick="toggleTask(this)"><i class="fas fa-check"></i></button>
+                    <button onclick="deleteTask(this)"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            taskList.appendChild(li);
+            saveTasks();
+            taskInput.value = "";
+        }
+
+        function toggleTask(button) {
+            let task = button.parentElement.parentElement;
+            task.classList.toggle("completed");
+            saveTasks();
+        }
+
+        function deleteTask(button) {
+            let task = button.parentElement.parentElement;
+            task.remove();
+            saveTasks();
+        }
+
+        function filterTasks() {
+            let filter = document.getElementById("filter").value;
+            let tasks = document.querySelectorAll(".task");
+            tasks.forEach(task => {
+                let isCompleted = task.classList.contains("completed");
+                task.style.display = 
+                    filter === "all" || 
+                    (filter === "completed" && isCompleted) || 
+                    (filter === "pending" && !isCompleted) 
+                    ? "flex" : "none";
+            });
+        }
+
+        function saveTasks() {
+            let tasks = [];
+            document.querySelectorAll(".task").forEach(task => {
+                tasks.push({ text: task.children[0].textContent, completed: task.classList.contains("completed") });
+            });
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
+        function loadTasks() {
+            let storedTasks = JSON.parse(localStorage.getItem("tasks")) || [];
+            storedTasks.forEach(taskData => {
+                let taskList = document.getElementById("taskList");
+                let li = document.createElement("li");
+                li.className = "task";
+                if (taskData.completed) li.classList.add("completed");
+                li.draggable = true;
+                li.ondragstart = dragTask;
+                li.innerHTML = `
+                    <span>${taskData.text}</span>
+                    <div class="buttons">
+                        <button onclick="toggleTask(this)"><i class="fas fa-check"></i></button>
+                        <button onclick="deleteTask(this)"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                taskList.appendChild(li);
+            });
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+            localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+        }
+
+        function dragTask(event) {
+            event.dataTransfer.setData("text", event.target.outerHTML);
+            event.target.remove();
+            saveTasks();
+        }
+
+        function allowDrop(event) {
+            event.preventDefault();
+        }
+
+        function dropTask(event) {
+            event.preventDefault();
+            let data = event.dataTransfer.getData("text");
+            let taskList = document.getElementById("taskList");
+            taskList.innerHTML += data;
+            saveTasks();
+        }
+    </script>
+</body>
+</html>
